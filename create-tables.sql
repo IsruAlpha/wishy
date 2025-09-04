@@ -42,3 +42,4 @@ CREATE POLICY IF NOT EXISTS "Allow public delete on votes" ON votes FOR DELETE U
 
 CREATE POLICY IF NOT EXISTS "Allow public read access on comments" ON comments FOR SELECT USING (true);
 CREATE POLICY IF NOT EXISTS "Allow public insert on comments" ON comments FOR INSERT WITH CHECK (true);
+

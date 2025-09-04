@@ -77,3 +77,4 @@ This will create:
 - `created_at`: Timestamp
 
 All tables have Row Level Security enabled with public read/write policies for now.
+
