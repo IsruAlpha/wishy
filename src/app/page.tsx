@@ -27,6 +27,7 @@ export default function Home() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [activeTab, setActiveTab] = useState<'wishes' | 'comments'>('wishes');
 
   // Fetch wishes from Supabase
   useEffect(() => {
@@ -265,17 +266,17 @@ export default function Home() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-modern-black text-modern-primary' : 'bg-white text-gray-900'}`}>
       {/* Header */}
-      <div className={`border-b ${isDarkMode ? 'border-modern' : 'border-gray-200'} px-6 py-4 flex justify-between items-center`}>
-        <h1 className="text-2xl font-semibold tracking-tight">Wish</h1>
-        <div className="flex items-center gap-4">
+      <div className={`border-b ${isDarkMode ? 'border-modern' : 'border-gray-200'} px-4 sm:px-6 py-4 flex justify-between items-center`}>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Wish</h1>
+        <div className="flex items-center gap-2 sm:gap-4">
           <a 
             href="https://t.me/IsruWill" 
             target="_blank" 
             rel="noopener noreferrer"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? 'text-modern-secondary hover:bg-modern-gray hover:text-modern-primary' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${isDarkMode ? 'text-modern-secondary hover:bg-modern-gray hover:text-modern-primary' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
-            <Mail className="w-4 h-4" />
-            Contact
+            <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Contact</span>
           </a>
           <button 
             onClick={toggleTheme}
@@ -286,48 +287,87 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Left Column - Input */}
-        <div className={`w-80 border-r ${isDarkMode ? 'border-modern' : 'border-gray-200'} p-6`}>
+      {/* Mobile Tab Navigation */}
+      <div className="sm:hidden border-b border-modern">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('wishes')}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'wishes'
+                ? isDarkMode 
+                  ? 'text-modern-primary border-b-2 border-blue-500 bg-modern-gray' 
+                  : 'text-gray-900 border-b-2 border-blue-500 bg-gray-100'
+                : isDarkMode
+                  ? 'text-modern-secondary hover:text-modern-primary'
+                  : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Wishes
+          </button>
+          <button
+            onClick={() => setActiveTab('comments')}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'comments'
+                ? isDarkMode 
+                  ? 'text-modern-primary border-b-2 border-blue-500 bg-modern-gray' 
+                  : 'text-gray-900 border-b-2 border-blue-500 bg-gray-100'
+                : isDarkMode
+                  ? 'text-modern-secondary hover:text-modern-primary'
+                  : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Comments
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)]">
+        {/* Desktop: Left Column - Input | Mobile: Always visible */}
+        <div className={`${activeTab === 'wishes' ? 'block' : 'hidden'} sm:block lg:w-80 border-r ${isDarkMode ? 'border-modern' : 'border-gray-200'} p-4 sm:p-6`}>
           <div className="space-y-4">
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="write your wish here..."
-              className={`w-full p-3 ${isDarkMode ? 'bg-modern-card border-modern text-modern-primary placeholder:text-modern-muted' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500'} border rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
+              className={`w-full p-3 ${isDarkMode ? 'bg-modern-card border-modern text-modern-primary placeholder:text-modern-muted' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500'} border rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-base`}
             />
             <button
               onClick={handleSubmit}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-all duration-200 hover:shadow-lg"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-all duration-200 hover:shadow-lg text-base"
             >
               Make a Wish
             </button>
           </div>
         </div>
 
-        {/* Middle Column - Wishes List */}
-        <div className={`flex-1 border-r ${isDarkMode ? 'border-modern' : 'border-gray-200'} overflow-y-auto`}>
-          <div className="p-6 space-y-3">
+        {/* Desktop: Middle Column - Wishes List | Mobile: Tab content */}
+        <div className={`${activeTab === 'wishes' ? 'block' : 'hidden'} sm:block lg:flex-1 border-r ${isDarkMode ? 'border-modern' : 'border-gray-200'} overflow-y-auto`}>
+          <div className="p-4 sm:p-6 space-y-3">
             {wishes.map((wish) => (
               <div
                 key={wish.id}
                 className={`p-4 ${isDarkMode ? 'bg-modern-card' : 'bg-gray-50'} rounded-lg cursor-pointer transition-all duration-200 ${
                   selectedWish?.id === wish.id ? 'ring-2 ring-blue-500' : isDarkMode ? 'hover:bg-gray-750' : 'hover:bg-gray-100'
                 }`}
-                onClick={() => setSelectedWish(wish)}
+                onClick={() => {
+                  setSelectedWish(wish);
+                  if (window.innerWidth < 640) {
+                    setActiveTab('comments');
+                  }
+                }}
               >
                 <div className="flex justify-between items-start">
-                  <p className={`${isDarkMode ? 'text-modern-primary' : 'text-gray-900'} flex-1 pr-4 font-medium leading-relaxed`}>{wish.text}</p>
-                  <ChevronDown className={`w-4 h-4 ${isDarkMode ? 'text-modern-muted' : 'text-gray-500'}`} />
+                  <p className={`${isDarkMode ? 'text-modern-primary' : 'text-gray-900'} flex-1 pr-4 font-medium leading-relaxed text-sm sm:text-base`}>{wish.text}</p>
+                  <ChevronDown className={`w-4 h-4 ${isDarkMode ? 'text-modern-muted' : 'text-gray-500'} flex-shrink-0`} />
                 </div>
-                <div className={`flex items-center gap-4 mt-3 text-sm ${isDarkMode ? 'text-modern-secondary' : 'text-gray-500'}`}>
+                <div className={`flex items-center gap-3 sm:gap-4 mt-3 text-sm ${isDarkMode ? 'text-modern-secondary' : 'text-gray-500'}`}>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       handleLike(wish.id);
                     }}
-                    className={`flex items-center gap-1 hover:scale-110 transition-all duration-200 ${
+                    className={`flex items-center gap-1 hover:scale-110 transition-all duration-200 touch-manipulation ${
                       wish.isLiked 
                         ? 'text-red-500' 
                         : isDarkMode 
@@ -349,8 +389,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right Column - Comments */}
-        <div className="w-80 p-6">
+        {/* Desktop: Right Column - Comments | Mobile: Tab content */}
+        <div className={`${activeTab === 'comments' ? 'block' : 'hidden'} sm:block lg:w-80 p-4 sm:p-6`}>
           <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-modern-primary' : 'text-gray-900'}`}>Comments</h2>
           {selectedWish ? (
             <div className="space-y-4">
@@ -368,11 +408,11 @@ export default function Home() {
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Select a wish to comment"
-                  className={`flex-1 p-2 ${isDarkMode ? 'bg-modern-card border-modern text-modern-primary placeholder:text-modern-muted' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500'} border rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
+                  className={`flex-1 p-2 ${isDarkMode ? 'bg-modern-card border-modern text-modern-primary placeholder:text-modern-muted' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500'} border rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-base`}
                 />
                 <button
                   type="submit"
-                  className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 hover:shadow-lg"
+                  className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 hover:shadow-lg touch-manipulation"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -380,7 +420,7 @@ export default function Home() {
             </div>
           ) : (
             <div className={`text-center ${isDarkMode ? 'text-modern-muted' : 'text-gray-400'} mt-20`}>
-              No selected Wish
+              <p className="text-sm">Select a wish to view comments</p>
             </div>
           )}
         </div>
