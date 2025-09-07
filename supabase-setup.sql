@@ -6,13 +6,14 @@ CREATE TABLE wishes (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create votes table
+-- Create votes table (updated with client_id for per-device likes)
 CREATE TABLE votes (
   id BIGSERIAL PRIMARY KEY,
   wish_id BIGINT REFERENCES wishes(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('upvote', 'downvote')),
+  client_id TEXT NOT NULL, -- This tracks which device/browser liked the wish
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(wish_id, type) -- Prevent duplicate votes (you might want to add user_id later)
+  UNIQUE(wish_id, client_id) -- Prevent duplicate votes per device
 );
 
 -- Create comments table
@@ -26,6 +27,7 @@ CREATE TABLE comments (
 -- Create indexes for better performance
 CREATE INDEX idx_wishes_created_at ON wishes(created_at DESC);
 CREATE INDEX idx_votes_wish_id ON votes(wish_id);
+CREATE INDEX idx_votes_client_id ON votes(client_id);
 CREATE INDEX idx_comments_wish_id ON comments(wish_id);
 
 -- Enable Row Level Security (RLS)
@@ -40,6 +42,7 @@ CREATE POLICY "Allow public insert on wishes" ON wishes FOR INSERT WITH CHECK (t
 
 CREATE POLICY "Allow public read access on votes" ON votes FOR SELECT USING (true);
 CREATE POLICY "Allow public insert on votes" ON votes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public delete on votes" ON votes FOR DELETE USING (true);
 
 CREATE POLICY "Allow public read access on comments" ON comments FOR SELECT USING (true);
 CREATE POLICY "Allow public insert on comments" ON comments FOR INSERT WITH CHECK (true);

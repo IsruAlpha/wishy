@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Heart, MessageCircle, ChevronDown, Send, Mail, Sun, Moon } from "lucide-react";
+import { Heart, MessageCircle, ChevronDown, Send, Mail, Sun, Moon, Sparkles } from "lucide-react";
 
 type Wish = {
   id: number;
@@ -20,6 +20,30 @@ type Comment = {
   created_at: string;
 };
 
+// Sprinkle effect component
+const SprinkleEffect = ({ isActive }: { isActive: boolean }) => {
+  if (!isActive) return null;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50">
+      {[...Array(20)].map((_, i) => (
+        <div
+          key={i}
+          className="absolute animate-sprinkle"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 2}s`,
+            animationDuration: `${2 + Math.random() * 2}s`,
+          }}
+        >
+          <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function Home() {
   const [text, setText] = useState("");
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -28,11 +52,27 @@ export default function Home() {
   const [commentText, setCommentText] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activeTab, setActiveTab] = useState<'wishes' | 'comments'>('wishes');
+  const [showSprinkles, setShowSprinkles] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch wishes from Supabase
-  useEffect(() => {
-    fetchWishes();
-  }, []);
+  // Generate a stable per-device ID (no login needed)
+const [clientId] = useState(() => {
+  if (typeof window !== "undefined") {
+    let id = localStorage.getItem("wishy_client_id");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("wishy_client_id", id);
+    }
+    return id;
+  }
+  return ""; // SSR safety
+});
+  
+useEffect(() => {
+  if (!clientId) return; // wait for clientId to exist
+  fetchWishes();
+}, [clientId]);
+
 
   // Fetch comments when a wish is selected
   useEffect(() => {
@@ -43,78 +83,68 @@ export default function Home() {
 
   async function fetchWishes() {
     try {
-      // First get all wishes
-      let { data: wishesData, error: wishesError } = await supabase
+      if (!clientId) return;
+  
+      const { data: wishesData, error: wishesError } = await supabase
         .from("wishes")
         .select("*")
         .order("created_at", { ascending: false });
-
+  
       if (wishesError) throw wishesError;
-
-      // Then get like counts for each wish
+  
       const wishesWithStats = await Promise.all(
         (wishesData || []).map(async (wish) => {
           let likes = 0;
           let isLiked = false;
-
+          let comments = 0;
+  
           try {
-            // Get likes (using votes table with type='upvote' as likes)
-            const { count: likesCount, error: likesError } = await supabase
+            // Check if THIS device has liked this wish
+            const { data: existingLike } = await supabase
+              .from("votes")
+              .select("id")
+              .eq("wish_id", wish.id)
+              .eq("type", "upvote")
+              .eq("client_id", clientId)
+              .maybeSingle();
+
+            // Only show red heart if THIS device liked it
+            isLiked = !!existingLike;
+  
+            const { count: likesCount } = await supabase
               .from("votes")
               .select("*", { count: "exact", head: true })
               .eq("wish_id", wish.id)
               .eq("type", "upvote");
-
-            if (!likesError) {
-              likes = likesCount || 0;
-            }
-
-            // Check if this wish is liked
-            const { data: existingLike, error: likeError } = await supabase
-              .from("votes")
-              .select("*")
-              .eq("wish_id", wish.id)
-              .eq("type", "upvote")
-              .single();
-
-            if (!likeError) {
-              isLiked = !!existingLike;
-            }
-          } catch (error) {
-            console.log("Votes table might not exist yet, using default values");
-          }
-
-          // Get comments
-          let comments = 0;
-          try {
-            const { count: commentsCount, error: commentsError } = await supabase
+  
+            likes = likesCount || 0;
+  
+            const { count: commentsCount } = await supabase
               .from("comments")
               .select("*", { count: "exact", head: true })
               .eq("wish_id", wish.id);
-
-            if (!commentsError) {
-              comments = commentsCount || 0;
-            }
-          } catch (error) {
-            console.log("Comments table might not exist yet, using default values");
+  
+            comments = commentsCount || 0;
+          } catch (innerError) {
+            console.error("Error fetching wish stats:", innerError);
           }
-
+  
           return {
             ...wish,
             likes,
             comments,
-            isLiked
+            isLiked,
           };
         })
       );
-
+  
       setWishes(wishesWithStats);
     } catch (error) {
       console.error("Error fetching wishes:", error);
       setWishes([]);
     }
   }
-
+    
   async function fetchComments(wishId: number) {
     try {
       let { data, error } = await supabase
@@ -131,10 +161,13 @@ export default function Home() {
     }
   }
 
-  // Submit a new wish
+  // Submit a new wish with sprinkle effect
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setShowSprinkles(true);
 
     try {
       const { error } = await supabase
@@ -145,83 +178,70 @@ export default function Home() {
       
       setText("");
       fetchWishes(); // Refresh the list
+      
+      // Hide sprinkles after animation
+      setTimeout(() => {
+        setShowSprinkles(false);
+        setIsSubmitting(false);
+      }, 3000);
+      
     } catch (error) {
       console.error("Error submitting wish:", error);
       alert("Failed to submit wish. Please try again.");
+      setShowSprinkles(false);
+      setIsSubmitting(false);
     }
   }
 
   // Like/unlike a wish
   async function handleLike(wishId: number) {
     try {
-      // Check if already liked (using votes table with type='upvote')
-      const { data: existingLike, error: checkError } = await supabase
+      // Check if this wish is liked by this device
+      const { data: existingLike, error: likeError } = await supabase
         .from("votes")
-        .select("*")
+        .select("id")
         .eq("wish_id", wishId)
         .eq("type", "upvote")
-        .single();
-
-      // If there's an error checking (like table doesn't exist), just update locally
-      if (checkError) {
-        console.log("Votes table not found, updating locally only");
-        // For now, just update locally without database
-        setWishes(prev => prev.map(wish => {
-          if (wish.id === wishId) {
-            const isCurrentlyLiked = wish.isLiked;
-            return {
-              ...wish,
-              likes: isCurrentlyLiked ? (wish.likes || 0) - 1 : (wish.likes || 0) + 1,
-              isLiked: !isCurrentlyLiked
-            };
-          }
-          return wish;
-        }));
-        return;
-      }
-
-      if (existingLike) {
-        // Unlike - delete the like
+        .eq("client_id", clientId)
+        .maybeSingle();
+  
+      if (!likeError && existingLike) {
+        // Unlike
         const { error } = await supabase
           .from("votes")
           .delete()
-          .eq("wish_id", wishId)
-          .eq("type", "upvote");
-        
-        if (error) {
-          console.error("Error deleting like:", error);
-          throw error;
-        }
+          .eq("id", existingLike.id);
+  
+        if (error) throw error;
       } else {
-        // Like - insert new like (as upvote)
+        // Like
         const { error } = await supabase
           .from("votes")
-          .insert([{ wish_id: wishId, type: "upvote" }]);
-        
-        if (error) {
-          console.error("Error inserting like:", error);
-          throw error;
-        }
+          .insert([{ wish_id: wishId, type: "upvote", client_id: clientId }]);
+  
+        if (error) throw error;
       }
-      
-      // Update the local state immediately for better UX
-      setWishes(prev => prev.map(wish => {
-        if (wish.id === wishId) {
-          const isCurrentlyLiked = wish.isLiked;
-          return {
-            ...wish,
-            likes: isCurrentlyLiked ? (wish.likes || 0) - 1 : (wish.likes || 0) + 1,
-            isLiked: !isCurrentlyLiked
-          };
-        }
-        return wish;
-      }));
-      
-      // Also refresh from database to ensure consistency
+  
+      // Update local state immediately
+      setWishes(prev =>
+        prev.map(wish => {
+          if (wish.id === wishId) {
+            const isCurrentlyLiked = wish.isLiked;
+            const likesCount = wish.likes || 0;
+            return {
+              ...wish,
+              likes: isCurrentlyLiked ? likesCount - 1 : likesCount + 1,
+              isLiked: !isCurrentlyLiked,
+            };
+          }
+          return wish;
+        })
+      );
+  
+      // Refresh from database to ensure consistency
       fetchWishes();
     } catch (error) {
       console.error("Error liking/unliking:", error);
-      // Revert the optimistic update on error
       fetchWishes();
     }
   }
@@ -265,6 +285,9 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-modern-black text-modern-primary' : 'bg-white text-gray-900'}`}>
+      {/* Sprinkle Effect */}
+      <SprinkleEffect isActive={showSprinkles} />
+      
       {/* Header */}
       <div className={`border-b ${isDarkMode ? 'border-modern' : 'border-gray-200'} px-4 sm:px-6 py-4 flex justify-between items-center`}>
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Wish</h1>
@@ -334,9 +357,24 @@ export default function Home() {
             />
             <button
               onClick={handleSubmit}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-all duration-200 hover:shadow-lg text-base"
+              disabled={isSubmitting}
+              className={`w-full py-3 rounded-lg font-medium transition-all duration-200 text-base flex items-center justify-center gap-2 ${
+                isSubmitting 
+                  ? 'bg-blue-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:scale-105'
+              }`}
             >
-              Make a Wish
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Making Wish...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Make a Wish
+                </>
+              )}
             </button>
           </div>
         </div>
