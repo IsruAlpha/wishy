@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Heart, MessageCircle, ChevronDown, Send, Mail, Sun, Moon, Sparkles } from "lucide-react";
+import { Heart, MessageCircle, ChevronDown, Send, Mail, Sun, Moon, Sparkles, Crown } from "lucide-react";
 
 type Wish = {
   id: number;
@@ -54,6 +54,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'wishes' | 'comments'>('wishes');
   const [showSprinkles, setShowSprinkles] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [wishOfTheDay, setWishOfTheDay] = useState<Wish | null>(null);
 
   // Generate a stable per-device ID (no login needed)
 const [clientId] = useState(() => {
@@ -139,9 +140,26 @@ useEffect(() => {
       );
   
       setWishes(wishesWithStats);
+      
+      // Find the most liked wish for "Wish of the Day"
+      if (wishesWithStats.length > 0) {
+        const mostLikedWish = wishesWithStats.reduce((prev, current) => 
+          (current.likes || 0) > (prev.likes || 0) ? current : prev
+        );
+        
+        // Only set as wish of the day if it has at least 1 like
+        if (mostLikedWish.likes && mostLikedWish.likes > 0) {
+          setWishOfTheDay(mostLikedWish);
+        } else {
+          setWishOfTheDay(null);
+        }
+      } else {
+        setWishOfTheDay(null);
+      }
     } catch (error) {
       console.error("Error fetching wishes:", error);
       setWishes([]);
+      setWishOfTheDay(null);
     }
   }
     
@@ -382,7 +400,60 @@ useEffect(() => {
         {/* Desktop: Middle Column - Wishes List | Mobile: Tab content */}
         <div className={`${activeTab === 'wishes' ? 'block' : 'hidden'} sm:block lg:flex-1 border-r ${isDarkMode ? 'border-modern' : 'border-gray-200'} overflow-y-auto`}>
           <div className="p-4 sm:p-6 space-y-3">
-            {wishes.map((wish) => (
+            {/* Wish of the Day */}
+            {wishOfTheDay && (
+              <div 
+                className={`p-4 ${isDarkMode ? 'bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-500/30' : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300'} border-2 rounded-lg mb-4 relative overflow-hidden cursor-pointer transition-all duration-200 ${
+                  selectedWish?.id === wishOfTheDay.id ? 'ring-2 ring-blue-500' : isDarkMode ? 'hover:bg-yellow-900/30' : 'hover:bg-yellow-100'
+                }`}
+                onClick={() => {
+                  setSelectedWish(wishOfTheDay);
+                  if (window.innerWidth < 640) {
+                    setActiveTab('comments');
+                  }
+                }}
+              >
+                <div className="absolute top-2 right-2">
+                  <Crown className="w-5 h-5 text-yellow-500 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  <span className={`text-sm font-semibold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                    Wish of the Day
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <p className={`${isDarkMode ? 'text-modern-primary' : 'text-gray-900'} flex-1 pr-4 font-medium leading-relaxed text-sm sm:text-base`}>
+                    {wishOfTheDay.text}
+                  </p>
+                  <ChevronDown className={`w-4 h-4 ${isDarkMode ? 'text-modern-muted' : 'text-gray-500'} flex-shrink-0`} />
+                </div>
+                <div className={`flex items-center gap-3 sm:gap-4 mt-3 text-sm ${isDarkMode ? 'text-modern-secondary' : 'text-gray-500'}`}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLike(wishOfTheDay.id);
+                    }}
+                    className={`flex items-center gap-1 hover:scale-110 transition-all duration-200 touch-manipulation ${
+                      wishOfTheDay.isLiked 
+                        ? 'text-red-500' 
+                        : isDarkMode 
+                          ? 'text-modern-muted hover:text-red-400' 
+                          : 'text-gray-500 hover:text-red-400'
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 ${wishOfTheDay.isLiked ? 'fill-current' : ''} transition-all duration-200`} />
+                    <span className="font-medium">{wishOfTheDay.likes || 0}</span>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="font-medium">{wishOfTheDay.comments || 0}</span>
+                  </div>
+                  <span className="ml-auto text-xs text-modern-muted">{formatDate(wishOfTheDay.created_at)}</span>
+                </div>
+              </div>
+            )}
+            {wishes.filter(wish => wish.id !== wishOfTheDay?.id).map((wish) => (
               <div
                 key={wish.id}
                 className={`p-4 ${isDarkMode ? 'bg-modern-card' : 'bg-gray-50'} rounded-lg cursor-pointer transition-all duration-200 ${
