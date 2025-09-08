@@ -79,3 +79,4 @@ This will create:
 All tables have Row Level Security enabled with public read/write policies for now.
 
 
+

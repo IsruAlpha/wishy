@@ -34,18 +34,32 @@ export default function LandingPage() {
       {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-4xl mx-auto">
+          {/* Product Hunt Badge */}
+          <div className="mb-8">
+            <a 
+              href="https://www.producthunt.com/products/wish-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-wish&#0045;4" 
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img 
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1014327&theme=light&t=1757370022775" 
+                alt="Wish - A&#0032;social&#0032;media&#0032;app&#0032;but&#0032;for&#0032;your&#0032;wishes&#0046; | Product Hunt" 
+                style={{width: '250px', height: '54px'}} 
+                width="250" 
+                height="54" 
+                className="mx-auto"
+              />
+            </a>
+          </div>
+
           {/* Hero Text */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-8">
-            Share your wishes, get{" "}
-            <span className="font-[InstrumentSerif] font-bold italic text-5xl sm:text-6xl lg:text-7xl text-white">
-              anonymous
-            </span>{" "}
-            love
+            A social media app but for your wishes
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Send your new year wishes, get likes and comments from anonymous people
+            Make a wish, get likes and comments from anonymous people
           </p>
 
           {/* Get Started Button */}
